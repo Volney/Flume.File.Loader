@@ -52,32 +52,36 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
     threadPool = new ThreadPoolExecutor(threadCount, threadCount, 1, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(threadCount, true));;  
   }
 
+  Object foo = new Object();
+  
   @Override
 	public Status process() throws EventDeliveryException {
 		try {
 		  
-		  File[] childFiles = inputDir.listFiles();
+	    logger.warn("get number of files");
+      
+		  File[] files = inputDir.listFiles();
 		  
-		  if (childFiles.length == 0) {
+		  logger.warn("Number of files:" + files.length);
+		  
+		  if (files.length == 0) {
 		    return Status.BACKOFF;
 		  }
 		  
-		  for (File file: childFiles) { 
-		    
+		  for (File file: files) { 
 		    //The file is moved to the processing directory and is ready to load
 		    FileReaderThread fileReader = new FileReaderThread(getChannelProcessor(), file, processDir, successDir, failDir);
         threadPool.execute(fileReader);
-		    
 		  }
 		} catch (Exception ex) {
 			return Status.BACKOFF;
 		}
-		return Status.READY;
+		return Status.BACKOFF;
 	}
 
 	@Override
 	public void start() {
-		System.out.println("LocalFileSource starting");
+		System.out.println("LocalFileSource starting v1.1");
 
 		super.start();
 

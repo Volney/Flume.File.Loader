@@ -54,10 +54,15 @@ public class FileReaderThread implements Runnable {
       reader = getReaderForFileType(inputFile);
       readInputFile(reader);
       
-      
-      
       moveFileToSuccessDir();
       
+      try {
+        if (reader != null) {
+          reader.close();
+        }
+      } catch (Exception e2) {
+        logger.error("Unable to close reader for file '" + inputFile.getName() + "'", e2);
+      }
     } catch (Exception e) {
       logger.error("Problem reading '" + inputFile.getName() + "'", e);
       
@@ -70,14 +75,14 @@ public class FileReaderThread implements Runnable {
         logger.error("Unable to close reader for file '" + inputFile.getName() + "'", e2);
       }
       //move file to fail directory
-      moreFileToFailDir(e);
+      moveFileToFailDir(e);
     }
     
-    logger.error("Closing Thread '" + inputFile.getName() + "'");
+    logger.info("Closing Thread '" + inputFile.getName() + "'");
     
   }
 
-  private void moreFileToFailDir(Exception e) {
+  private void moveFileToFailDir(Exception e) {
     File failLocation = new File(failDir, inputFile.getName());
     if (inputFile.renameTo(failLocation) == false){
       logger.error("Unable to move file '" + inputFile.getName() + "' to fail directory", e);
@@ -92,7 +97,7 @@ public class FileReaderThread implements Runnable {
     if (inputFile.renameTo(successLocation) == false){
       logger.error("Unable to move file '" + inputFile.getName() + "' to success directory");
     } else {
-      logger.info("Moved '" + inputFile.getName() + "' to success directory.");
+      logger.warn("Moved '" + inputFile.getName() + "' to success directory.");
     }
     inputFile = successLocation;
   }
@@ -108,7 +113,7 @@ public class FileReaderThread implements Runnable {
       }
     } else {
       
-      logger.info("Moved " + inputFile.getName() + " to processed dir");
+      logger.warn("Moved " + inputFile.getName() + " to processed dir");
     }
     inputFile = processLocation;
   }
@@ -142,7 +147,7 @@ public class FileReaderThread implements Runnable {
         logger.debug("Processed event: {byteCounter:" + byteCounter + ",recordCounter:" + recordCounter + "}");
         break;
       } catch (ChannelException ce) {
-        logger.debug("Waiting {byteCounter:" + byteCounter + ",recordCounter:" + recordCounter + "}");
+        logger.warn("Waiting {byteCounter:" + byteCounter + ",recordCounter:" + recordCounter + "}");
         Thread.sleep(500);
       }
     }
