@@ -2,6 +2,7 @@ package com.cloudera.sa.flume.file.loader;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -14,6 +15,8 @@ import org.slf4j.LoggerFactory;
 
 public class FilePrepInterceptor implements Interceptor, Builder {
 
+  final static Pattern p = Pattern.compile("\\|");
+  
   private static final Logger logger = LoggerFactory
       .getLogger(FilePrepInterceptor.class);
   
@@ -30,9 +33,20 @@ public class FilePrepInterceptor implements Interceptor, Builder {
   @Override
   public Event intercept(Event event) {
     String filename = event.getHeaders().get(FileHeaderConst.FILENAME);
-    String recordNum = event.getHeaders().get(FileHeaderConst.RECORD_NUM);
     
-    Event newEvent = EventBuilder.withBody(Bytes.toBytes(filename + "||" + Bytes.toString(event.getBody())));
+    String eventBody = Bytes.toString(event.getBody());
+    
+    String[] bodySplit = p.split(eventBody);
+    
+    Event newEvent = EventBuilder.withBody(Bytes.toBytes(filename + "||" + eventBody));
+    
+    if (bodySplit.length > 1) {
+      newEvent.getHeaders().put(FileHeaderConst.YEAR_MONTH, bodySplit[1]);
+      logger.warn(FileHeaderConst.YEAR_MONTH + " is set to " + bodySplit[1]);
+    } else {
+      logger.warn(FileHeaderConst.YEAR_MONTH + " is set to black");
+    }
+    
     
     return newEvent;
   }
