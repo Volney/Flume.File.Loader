@@ -26,17 +26,21 @@ public class FileReaderThread implements Runnable {
   long byteCounter = 0;
   long recordCounter = 0;
   
+  FileReaderListener listener;
+  
+  
   ChannelProcessor channelProcessor;
   
   private static final Logger logger = LoggerFactory
       .getLogger(FileReaderThread.class);
   
-  public FileReaderThread(ChannelProcessor channelProcessor, File inputFile, File processDir, File successDir, File failDir) {
+  public FileReaderThread(ChannelProcessor channelProcessor, File inputFile, File processDir, File successDir, File failDir, FileReaderListener listener) {
     this.inputFile = inputFile;
     this.successDir = successDir;
     this.failDir = failDir;
     this.processDir = processDir;
     this.channelProcessor = channelProcessor;
+    this.listener = listener;
   }
   
   @Override
@@ -115,6 +119,7 @@ public class FileReaderThread implements Runnable {
       
       logger.warn("Moved " + inputFile.getName() + " to processed dir");
     }
+    listener.movedFileToProcessing(inputFile.getName());
     inputFile = processLocation;
   }
 

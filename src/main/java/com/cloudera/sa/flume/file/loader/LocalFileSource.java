@@ -2,6 +2,7 @@ package com.cloudera.sa.flume.file.loader;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class LocalFileSource extends AbstractSource implements PollableSource,
-		Configurable {
+		Configurable, FileReaderListener {
 
   private static final Logger logger = LoggerFactory
       .getLogger(LocalFileSource.class);
@@ -35,6 +36,8 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
   File failDir;
   File processDir;
   ThreadPoolExecutor threadPool;
+  
+  HashSet<String> fileNameInMotionSet = new HashSet<String>();
   
   @Override
   public void configure(Context context) {
@@ -69,9 +72,12 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
 		  }
 		  
 		  for (File file: files) { 
-		    //The file is moved to the processing directory and is ready to load
-		    FileReaderThread fileReader = new FileReaderThread(getChannelProcessor(), file, processDir, successDir, failDir);
-        threadPool.execute(fileReader);
+		    if (fileNameInMotionSet.contains(file.getName()) == false) {
+  		    //The file is moved to the processing directory and is ready to load
+  		    FileReaderThread fileReader = new FileReaderThread(getChannelProcessor(), file, processDir, successDir, failDir, this);
+  		    fileNameInMotionSet.add(file.getName());
+          threadPool.execute(fileReader);
+		    }
 		  }
 		} catch (Exception ex) {
 			return Status.BACKOFF;
@@ -107,5 +113,10 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
       throw new IOException(dirPath + " is not a valid directory.");
     }
     return dir;
+  }
+
+  @Override
+  public void movedFileToProcessing(String fileName) {
+    fileNameInMotionSet.remove(fileName);
   }
 }
