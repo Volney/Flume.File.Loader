@@ -7,15 +7,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
-import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.PollableSource;
 import org.apache.flume.conf.Configurable;
-import org.apache.flume.event.EventBuilder;
 import org.apache.flume.source.AbstractSource;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,9 +34,11 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
   ThreadPoolExecutor threadPool;
   
   HashSet<String> fileNameInMotionSet = new HashSet<String>();
+  HashSet<String> fileNameDoneMotionSet = new HashSet<String>();
   
   @Override
   public void configure(Context context) {
+    
     //Set up directories
     try {
       inputDir = prepDirectory(context.getString(INPUT_DIR));
@@ -59,27 +57,40 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
   
   @Override
 	public Status process() throws EventDeliveryException {
+    String currentFileName = "";
 		try {
 		  
-	    logger.warn("get number of files");
+	    logger.info("get number of files");
       
+	    synchronized (fileNameDoneMotionSet) {
+        fileNameInMotionSet.removeAll(fileNameDoneMotionSet);
+        fileNameDoneMotionSet.clear();
+	    }
+	    
 		  File[] files = inputDir.listFiles();
 		  
-		  logger.warn("Number of files:" + files.length);
+		  logger.warn("Number of files:(" + files.length + ") number of files in motion: (" + fileNameInMotionSet.size() + ")");
 		  
 		  if (files.length == 0) {
 		    return Status.BACKOFF;
 		  }
 		  
 		  for (File file: files) { 
-		    if (fileNameInMotionSet.contains(file.getName()) == false) {
+		    currentFileName = file.getName();
+		    if (fileNameInMotionSet.contains(currentFileName) == false) {
   		    //The file is moved to the processing directory and is ready to load
   		    FileReaderThread fileReader = new FileReaderThread(getChannelProcessor(), file, processDir, successDir, failDir, this);
-  		    fileNameInMotionSet.add(file.getName());
+  		    fileNameInMotionSet.add(currentFileName);
           threadPool.execute(fileReader);
+		    } else {
+		      logger.warn("Unable to start reader for " + currentFileName + " because file is in motion.");
 		    }
 		  }
 		} catch (Exception ex) {
+		  
+		  synchronized (fileNameDoneMotionSet) {
+		    fileNameDoneMotionSet.add(currentFileName);
+		  }
 			return Status.BACKOFF;
 		}
 		return Status.BACKOFF;
@@ -117,6 +128,8 @@ public class LocalFileSource extends AbstractSource implements PollableSource,
 
   @Override
   public void movedFileToProcessing(String fileName) {
-    fileNameInMotionSet.remove(fileName);
+    synchronized (fileNameDoneMotionSet) {
+      fileNameDoneMotionSet.add(fileName);
+    }
   }
 }

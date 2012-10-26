@@ -42,9 +42,9 @@ public class FilePrepInterceptor implements Interceptor, Builder {
     
     if (bodySplit.length > 1) {
       newEvent.getHeaders().put(FileHeaderConst.YEAR_MONTH, bodySplit[1]);
-      logger.warn(FileHeaderConst.YEAR_MONTH + " is set to " + bodySplit[1]);
+      logger.info(FileHeaderConst.YEAR_MONTH + " is set to " + bodySplit[1]);
     } else {
-      logger.warn(FileHeaderConst.YEAR_MONTH + " is set to black");
+      logger.info(FileHeaderConst.YEAR_MONTH + " is set to black");
     }
     
     

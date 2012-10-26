@@ -101,7 +101,7 @@ public class FileReaderThread implements Runnable {
     if (inputFile.renameTo(successLocation) == false){
       logger.error("Unable to move file '" + inputFile.getName() + "' to success directory");
     } else {
-      logger.warn("Moved '" + inputFile.getName() + "' to success directory.");
+      logger.info("Moved '" + inputFile.getName() + "' to success directory.");
     }
     inputFile = successLocation;
   }
@@ -117,7 +117,7 @@ public class FileReaderThread implements Runnable {
       }
     } else {
       
-      logger.warn("Moved " + inputFile.getName() + " to processed dir");
+      logger.info("Moved " + inputFile.getName() + " to processed dir");
     }
     listener.movedFileToProcessing(inputFile.getName());
     inputFile = processLocation;
